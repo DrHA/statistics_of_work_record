@@ -1,0 +1,89 @@
+ #!/usr/bin/perl
+ use LWP::Simple;
+ use strict;
+ my $i_year;
+ my $i_mon;
+ (my $now_sec,my $now_min,my $now_hour,my $now_day,my $now_mon,my $now_year,my $now_wday,my $now_yday,my $isdst)=localtime(time());
+ ## 输入
+ print "请输入您的序号（格式如：128）：";
+ my $line = <STDIN>;
+ while($line =~  /[\D]/g){
+ 	 print "序号格式有误，请重新输入您的序号：";
+   $line = <STDIN>;
+ }
+ print "请输入您要查询的年份和月份（格式如：2016 12）：";
+ my $c_year_m = <STDIN>;
+ while(1){
+   if($c_year ^~  /^([\d]{4})\s+([\d]{1,2})$/g){
+ 	    print "格式有误，请重新输入您要查询的年份和月份（格式如：2015 12）：";
+   }elsif($c_year =~  /^([\d]{4})\s+([\d]{1,2})$/g){
+ 	   if($1>$now_year || $1<$now_year-1){
+    	  print "年份只能为2015或者2016，请重新输入您要查询的年份和月份（格式如：2015 12）：";
+     }elsif($2<1 || $2>12){
+     	  print "月份为1-12，请重新输入您要查询的年份和月份（格式如：2015 12）：";
+     }elsif($1==$now_year && $1>$now_mon){
+     	  print "超过当前月份，请重新输入您要查询的年份和月份（格式如：2015 12）：";
+     }else{
+        my $i_year=$1;
+        my $i_mon=$2;
+        last;
+    } 
+   }
+   $c_mon = <STDIN>;
+ }
+
+ ## 爬虫并存储
+ my $url="http://192.168.24.100/detail.asp?ID=".$line."&offset=";
+ my $last_day;
+ my $last_m;
+ my $last_h;
+ my $last_y;
+ my $last_mon;
+ my @sum_arr;# 按日存到hash中
+ my @day_arr;# 今日打卡明细
+ my %day_hash;
+ foreach(0..8){
+ 	 my $page = $_*22;
+ 	 #print $url.$page." \n";
+ 	 my $content = get $url.$page or die "couldnt get the  content  of  $url";
+ 	 my @is_wkd; 
+ 	 while($content =~ /\<td\>([\d]{4})\/([\d]{1,2})\/([\d]{1,2})\s+([\d]{2})\:([\d]{2})\:([\d]{2})\<\/td\>/g){
+ 	 	  if(){
+ 	 	  }
+ 	 	   ## 按日存到hash中
+ 	 	  if($last_day ne $3){
+ 	 	  	   $last_day = $3;
+		 	 	   $last_m = $5;
+		 	 	   $last_h = $4;
+		 	 	   $last_mon = $2;
+		 	 	   $last_y = $1;
+ 	 	    	 %day_hash={day => $last_day,day_arr => @day_arr,last_h => $last_h,last_m => $last_m,month => $last_mon,year => $last_y};
+ 	 	   	   push (@sum_arr,{day => $last_day,day_arr => @day_arr,last_h => $last_h,last_m => $last_m,month => $last_mon,year => $last_y});
+ 	 	   	   #push (@sum_arr,%day_hash);
+ 	 	   	   @day_arr="";
+ 	 	   	   %day_hash="";  
+ 	 	   	  
+ 	 	   }
+ 	 	  
+ 	 	   push(@day_arr,$4.$5.$6);
+ 	 	
+ 	 }
+ }
+ ## 分析
+ my $n_w;
+ my $a_w;
+ foreach(@sum_arr){
+ 	 
+ 	  	if($_->{last_h}>=23 && $_->{last_m}>=30){
+ 	  	    	print $_->{year}."年".$_->{month}."月".$_->{day}."日 值夜班  最后打卡时间 $_->{last_h}:$_->{last_m} \n";
+ 	  	      $n_w++;
+ 	  	}elsif($_->{last_h}>=19 && $_->{last_m}>=30){
+ 	  	    	print $_->{year}."年".$_->{month}."月".$_->{day}."日 值加班时间2小时  最后打卡时间 $_->{last_h}:$_->{last_m} \n";
+ 	  	    	$a_w+=2;
+ 	  	}elsif($_->{last_h}>=18){
+ 	  	    	print $_->{year}."年".$_->{month}."月".$_->{day}."日 值加班时间1小时  最后打卡时间 $_->{last_h}:$_->{last_m} \n";
+ 	  	    	$a_w+=1;
+ 	  	}
+ 	 
+ }
+ print "总计(工作日) 夜班 $n_w次 加班$a_w小时";
