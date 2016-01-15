@@ -1,4 +1,6 @@
  #!/usr/bin/perl
+ # author:DR.HA 
+ # email:719520474@qq.com
  use LWP::Simple;
  use strict;
  use POSIX;
